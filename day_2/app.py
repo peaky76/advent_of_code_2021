@@ -1,3 +1,6 @@
+import operator
+
+
 class Position:
     
     def __init__(self):
@@ -28,13 +31,15 @@ class Position:
        
     @property 
     def output(self):
-        return self.horizontal * self.depth    
+        return self.horizontal * self.depth   
+     
             
 class Command:
 
     def __init__(self, direction, amount):
         self.direction = direction
         self.amount = int(amount)
+
 
 file = open("puzzle_input.txt", "r")
 raw_commands = [line.rstrip('\n').split(' ') for line in file]
@@ -53,3 +58,4 @@ for command in commands:
     position.apply_part_two_command(command)
     
 print(position.output) #1880593125
+
