@@ -1,43 +1,38 @@
 SEVEN_SEGMENT_DISPLAYS = {
-    0: 'abcefg',
-    1: 'cf',
-    2: 'acdeg',
-    3: 'acdfg',
-    4: 'bcdf',
-    5: 'abdfg',
-    6: 'abdefg',
-    7: 'acf',
-    8: 'abcdefg',
-    9: 'abcdfg'
+    'abcefg': 0,
+    'cf': 1,
+    'acdeg': 2,
+    'acdfg': 3,
+    'bcdf': 4,
+    'abdfg': 5,
+    'abdefg': 6,
+    'acf': 7,
+    'abcdefg': 8,
+    'abcdfg': 9 
 }
 
-PATTERNS = SEVEN_SEGMENT_DISPLAYS.values()
+PATTERNS = SEVEN_SEGMENT_DISPLAYS.keys()
 UNIQUE_LENGTHS = [len(v) for v in PATTERNS if [len(x) for x in PATTERNS].count(len(v)) == 1] 
 
-def get_segment_occurrences_by_pattern_length(patterns):
-    segment_occurrence_dict = {}
-    for letter in list('abcdefg'):
-        segment_occurrence_dict[letter] = []
-        for p in patterns:
-            if letter in list(p):
-                segment_occurrence_dict[letter] += str(len(p))
-    for k, v in segment_occurrence_dict.items():
-        segment_occurrence_dict[k] = ''.join(sorted(v))
-    return segment_occurrence_dict
+def get_pattern_lengths_by_segment(patterns):
+    return {
+        letter: ''.join(sorted([str(len(p)) for p in patterns if letter in list(p)])) for letter in list('abcdefg')
+    }
 
-def get_decoder(patterns):
-    decoder_dict = {}
-    for ak, av in get_segment_occurrences_by_pattern_length(patterns).items():
-        for bk, bv in get_segment_occurrences_by_pattern_length(PATTERNS).items():
-            if av == bv:
-                decoder_dict[ak] = bk
-    return decoder_dict
-
-def decode(code, decoder):
-    translation = ''.join(sorted([decoder[letter] for letter in code]))
-    for k, v in SEVEN_SEGMENT_DISPLAYS.items():
-        if v == translation:
-            return str(k)
+class Decoder:
+    
+    def __init__(self, corrupted_patterns):
+        self.input_dict = get_pattern_lengths_by_segment(corrupted_patterns)   
+        
+    @property    
+    def decoding_dict(self):
+        output_dict = {v: k  for k, v in get_pattern_lengths_by_segment(PATTERNS).items()}
+        return {
+            k1: v2 for k1, v1 in self.input_dict.items() for k2, v2 in output_dict.items() if v1 == k2
+        }
+        
+    def decode(self, code):
+        return SEVEN_SEGMENT_DISPLAYS[''.join(sorted([self.decoding_dict[letter] for letter in code]))]            
 
 class Note:
     
@@ -45,21 +40,19 @@ class Note:
         self.patterns, self.readings = [section.split(' ') for section in line.split(' | ')]
 
     @property
-    def decoder(self):
-        return get_decoder(self.patterns)    
-
-    @property
     def output(self):
-        return int(''.join([decode(reading, self.decoder) for reading in self.readings]))
-        
+        decoder = Decoder(self.patterns)
+        digits = [decoder.decode(reading) for reading in self.readings]
+        return int(''.join([str(digit) for digit in digits]))
+
 # READ IN
 file = open("puzzle_input.txt", "r")
 notes = [Note(line.rstrip('\n')) for line in file]
 
 # PART ONE
-outputs = [output for note in notes for output in note.readings]
-result = len([len(x) for x in outputs if len(x) in UNIQUE_LENGTHS])
+readings = [reading for note in notes for reading in note.readings]
+result = len([len(x) for x in readings if len(x) in UNIQUE_LENGTHS])
 print(result) # 255 
 
-# PART TWO
+# PART TWO  
 print(sum([note.output for note in notes])) # 982158
