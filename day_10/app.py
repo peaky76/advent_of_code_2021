@@ -16,51 +16,57 @@ COMPLETIONS = {
 }
 
 BRACKET_PAIRS = ['()','[]','{}','<>']
+    
+class Line:
 
-def sweep(line):
-    for pair in BRACKET_PAIRS:
-        line = line.replace(pair, '')
-    return line
+    def __init__(self, line):
+        self.line = line
+    
+    @property
+    def swept(self):
+        line = self.line
+        orig_line = self.line
+        while True:
+            for pair in BRACKET_PAIRS: 
+                line = line.replace(pair, '')
+            if line == orig_line:
+                break
+            orig_line = line              
+        return line
 
-def multi_sweep(line):
-    orig_line = line
-    while True:
-        line = sweep(line)
-        if line == orig_line:
-            break
-        orig_line = line
-    return line
+    @property
+    def is_corrupt(self):
+        return any([x[1] in self.swept for x in BRACKET_PAIRS])
 
-def is_corrupt(multi_swept_line):
-    return any([x[1] in multi_swept_line for x in BRACKET_PAIRS])
+    @property
+    def is_incomplete(self):
+        return not self.is_corrupt and not self.swept == ''
+        
+    @property
+    def corrupting_char(self):
+        return None if not self.is_corrupt else [char for char in self.swept if char in [y[1] for y in BRACKET_PAIRS]][0]
 
-def corrupting_char(corrupt_multi_swept_line):
-    return [char for char in corrupt_multi_swept_line if char in [y[1] for y in BRACKET_PAIRS]][0]
-
-def get_line_completion(incomplete_line):
-    brackets = ''.join([pair[1] for bracket in incomplete_line[::-1] for pair in BRACKET_PAIRS if bracket == pair[0]])
-    return brackets
-
-def completion_score(completion):
-    score = 0
-    for bracket in completion:
-        score *= 5
-        score += COMPLETIONS[bracket]
-    return score
+    @property
+    def completion(self):
+        return [] if not self.is_incomplete else ''.join([pair[1] for bracket in self.swept[::-1] for pair in BRACKET_PAIRS if bracket == pair[0]])
+    
+    @property
+    def completion_score(self):
+        score = 0 
+        for bracket in self.completion:
+            score *= 5
+            score += COMPLETIONS[bracket]
+        return score
+        
 
 file = open("puzzle_input.txt", "r")
-lines = [line.rstrip('\n') for line in file]
-
-# SWEEP AND CLEAN
-lines = [multi_sweep(line) for line in lines]
+lines = [Line(line.rstrip('\n')) for line in file]
 
 # PART ONE
-corrupting_char_count = Counter([corrupting_char(line) for line in lines if is_corrupt(line)])
+corrupting_char_count = Counter([line.corrupting_char for line in lines if line.is_corrupt])
 score = sum([ILLEGALS[k] * v for k, v in corrupting_char_count.items()])
 print(score) # 26397 / 344193
 
 # PART TWO
-incomplete_lines = [line for line in lines if not is_corrupt(line)]
-completions = [get_line_completion(line) for line in incomplete_lines]
-scores = [completion_score(completion) for completion in completions]
+scores = [line.completion_score for line in lines if line.completion_score > 0]
 print(median(scores)) # 288957 / 3241238967
